@@ -1,7 +1,7 @@
 [
   {
     "id": 2,
-    "hoten": "Tran Thi Binh",
+    "hoten": "Tran Thi B",
     "mssv": "SV002",
     "lop": "DHKTPM18",
     "nganh": "He thong thong tin"
@@ -22,11 +22,9 @@
   },
   {
     "id": 5,
-    "hoten": "23",
-    "mssv": "2323",
-    "lop": "23",
-    "nganh": "dss"
+    "hoten": "Nguyễn Văn B",
+    "mssv": "23132345",
+    "lop": "cntt",
+    "nganh": "khoa học máy tính"
   }
-  
 ]
-

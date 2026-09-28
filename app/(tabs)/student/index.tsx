@@ -2,6 +2,7 @@ import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -70,6 +71,16 @@ export default function StudentListScreen() {
   }
 
   function confirmDelete(student: Student) {
+    if (Platform.OS === 'web') {
+      if (window.confirm(`Bạn có chắc muốn xóa ${student.hoten}?`)) {
+        void deleteStudent(student.id).then(setStudents).catch((error) => {
+          console.error('Không xóa được sinh viên:', error);
+          window.alert('Không xóa được sinh viên.');
+        });
+      }
+      return;
+    }
+
     Alert.alert('Xóa sinh viên', `Bạn có chắc muốn xóa ${student.hoten}?`, [
       { text: 'Hủy', style: 'cancel' },
       {
