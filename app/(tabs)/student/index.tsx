@@ -1,152 +1,154 @@
-import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
+import { Stack, router, useFocusEffect } from 'expo-router';
+import {
+  addStudent,
+  deleteStudent,
+  getStudents,
+  Student,
+  StudentInput,
+} from '../../../services/student-services';
 
-interface Student {
-  id: number;
-  name: string;
-  mssv: string;
-  lop: string;
-  nganh: string;
-}
+const emptyForm: StudentInput = { hoten: '', mssv: '', lop: '', nganh: '' };
 
 export default function StudentListScreen() {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [form, setForm] = useState<StudentInput>(emptyForm);
+  const [showForm, setShowForm] = useState(false);
 
-  useEffect(() => {
-    fetch('http://localhost/sinhvien_api/get_sinhvien.php')
-      .then((response) => {
-        console.log('API status:', response.status);
-
-        if (!response.ok) {
-          throw new Error('API lỗi: ' + response.status);
-        }
-
-        return response.json();
-      })
-      .then((data) => {
-        console.log('Dữ liệu API:', data);
-
-        const studentsFromAPI = data.map((student: any) => ({
-          id: Number(student.id),
-          name: student.hoten,
-          mssv: student.mssv,
-          lop: student.lop,
-          nganh: student.nganh,
-        }));
-
-        setStudents(studentsFromAPI);
-
-        // QUAN TRỌNG: tải xong thì tắt loading
-        setLoading(false);
-      })
-      .catch((error) => {
-        console.log('Lỗi API:', error);
-
-        // Có lỗi cũng phải tắt loading
-        setLoading(false);
-      });
+  const loadStudents = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      setStudents(await getStudents());
+    } catch (e) {
+      console.error('Không tải được danh sách sinh viên:', e);
+      setError('Không thể tải danh sách sinh viên.');
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const handleStudentPress = (student: Student) => {
-    router.push({
-      pathname: '/student/student-detail',
-      params: {
-        id: String(student.id),
-        name: student.name,
-        mssv: student.mssv,
-        lop: student.lop,
-        nganh: student.nganh,
-      },
-    });
-  };
+  useFocusEffect(useCallback(() => { void loadStudents(); }, [loadStudents]));
 
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" />
-        <Text>Đang tải danh sách sinh viên...</Text>
-      </View>
-    );
+  function startAdd() {
+    setForm(emptyForm);
+    setShowForm(true);
+  }
+
+  async function saveStudent() {
+    if (!form.hoten.trim() || !form.mssv.trim() || !form.lop.trim() || !form.nganh.trim()) {
+      Alert.alert('Thiếu thông tin', 'Vui lòng nhập đầy đủ thông tin sinh viên.');
+      return;
+    }
+    try {
+      const cleanForm = {
+        hoten: form.hoten.trim(),
+        mssv: form.mssv.trim(),
+        lop: form.lop.trim(),
+        nganh: form.nganh.trim(),
+      };
+      const updated = await addStudent(cleanForm);
+      setStudents(updated);
+      setShowForm(false);
+      setForm(emptyForm);
+    } catch (e) {
+      console.error('Không lưu được sinh viên:', e);
+      Alert.alert('Lỗi', 'Không lưu được thông tin sinh viên.');
+    }
+  }
+
+  function confirmDelete(student: Student) {
+    Alert.alert('Xóa sinh viên', `Bạn có chắc muốn xóa ${student.hoten}?`, [
+      { text: 'Hủy', style: 'cancel' },
+      {
+        text: 'Xóa',
+        style: 'destructive',
+        onPress: () => {
+          void deleteStudent(student.id)
+            .then(setStudents)
+            .catch((e) => {
+              console.error('Không xóa được sinh viên:', e);
+              Alert.alert('Lỗi', 'Không xóa được sinh viên.');
+            });
+        },
+      },
+    ]);
   }
 
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>Danh sách sinh viên</Text>
-
-      {students.map((student) => (
-        <Pressable
-          key={student.id}
-          style={styles.studentItem}
-          onPress={() => handleStudentPress(student)}
-          accessibilityRole="button"
-          accessibilityLabel={`Xem thông tin sinh viên ${student.name}`}
-        >
-          <Text style={styles.studentName}>
-            {student.name}
-          </Text>
-
-          <Text style={styles.studentInfo}>
-            MSSV: {student.mssv}
-          </Text>
-
-          <Text style={styles.studentInfo}>
-            Lớp: {student.lop}
-          </Text>
-
-          <Text style={styles.studentInfo}>
-            Ngành: {student.nganh}
-          </Text>
+      <Stack.Screen options={{ title: 'Danh sách sinh viên' }} />
+      <View style={styles.header}>
+        <Text style={styles.heading}>Danh sách sinh viên</Text>
+        <Pressable style={styles.addButton} onPress={startAdd}>
+          <Text style={styles.buttonText}>+ Thêm</Text>
         </Pressable>
-      ))}
+      </View>
+      <Text style={styles.count}>Tổng số: {students.length} sinh viên</Text>
+
+      {showForm && (
+        <View style={styles.form}>
+          <Text style={styles.formTitle}>Thêm sinh viên</Text>
+          <TextInput style={styles.input} placeholder="Họ và tên" value={form.hoten} onChangeText={(hoten) => setForm({ ...form, hoten })} />
+          <TextInput style={styles.input} placeholder="Mã số sinh viên" value={form.mssv} onChangeText={(mssv) => setForm({ ...form, mssv })} />
+          <TextInput style={styles.input} placeholder="Lớp" value={form.lop} onChangeText={(lop) => setForm({ ...form, lop })} />
+          <TextInput style={styles.input} placeholder="Ngành" value={form.nganh} onChangeText={(nganh) => setForm({ ...form, nganh })} />
+          <View style={styles.formActions}>
+            <Pressable style={styles.addButton} onPress={() => void saveStudent()}><Text style={styles.buttonText}>Lưu</Text></Pressable>
+            <Pressable style={styles.cancelButton} onPress={() => setShowForm(false)}><Text>Hủy</Text></Pressable>
+          </View>
+        </View>
+      )}
+
+      {loading ? <ActivityIndicator size="large" /> : error ? (
+        <Text style={styles.error}>{error}</Text>
+      ) : students.length === 0 ? <Text>Chưa có sinh viên.</Text> : (
+        <ScrollView contentContainerStyle={styles.list}>
+          {students.map((student) => (
+            <View key={student.id} style={styles.card}>
+              <Pressable onPress={() => router.push({ pathname: '/student/student-detail', params: { id: String(student.id) } })}>
+                <Text style={styles.name}>{student.hoten}</Text>
+                <Text style={styles.info}>MSSV: {student.mssv} · Lớp: {student.lop}</Text>
+                <Text style={styles.info}>Ngành: {student.nganh}</Text>
+              </Pressable>
+              <Pressable style={[styles.deleteButton, styles.cardDelete]} onPress={() => confirmDelete(student)}><Text style={styles.buttonText}>Xóa sinh viên</Text></Pressable>
+            </View>
+          ))}
+        </ScrollView>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-    backgroundColor: '#f2f2f2',
-  },
-
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 10,
-  },
-
-  header: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 20,
-  },
-
-  studentItem: {
-    padding: 15,
-    marginBottom: 10,
-    backgroundColor: '#fff',
-    borderRadius: 5,
-    elevation: 2,
-  },
-
-  studentName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 5,
-  },
-
-  studentInfo: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 3,
-  },
+  container: { flex: 1, padding: 20, backgroundColor: '#f2f2f2' },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  heading: { fontSize: 24, fontWeight: 'bold' },
+  count: { fontSize: 16, color: '#4b5563', marginBottom: 14 },
+  list: { gap: 10, paddingBottom: 20 },
+  card: { padding: 16, backgroundColor: '#fff', borderRadius: 10, elevation: 2 },
+  name: { fontSize: 18, fontWeight: 'bold', marginBottom: 6 },
+  info: { fontSize: 14, color: '#555', marginTop: 2 },
+  form: { backgroundColor: '#fff', borderRadius: 10, padding: 14, marginBottom: 16 },
+  formTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 10 },
+  input: { borderWidth: 1, borderColor: '#d1d5db', borderRadius: 7, padding: 10, marginBottom: 8, backgroundColor: '#fff' },
+  formActions: { flexDirection: 'row', gap: 8, marginTop: 12 },
+  addButton: { backgroundColor: '#2563eb', paddingVertical: 10, paddingHorizontal: 14, borderRadius: 8, alignItems: 'center' },
+  deleteButton: { backgroundColor: '#dc2626', paddingVertical: 8, paddingHorizontal: 14, borderRadius: 7 },
+  cardDelete: { alignSelf: 'flex-start', marginTop: 10 },
+  cancelButton: { paddingVertical: 10, paddingHorizontal: 14, borderRadius: 8, backgroundColor: '#e5e7eb' },
+  buttonText: { color: '#fff', fontWeight: '600' },
+  error: { color: '#b91c1c' },
 });

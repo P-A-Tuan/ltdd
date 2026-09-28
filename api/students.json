@@ -1,0 +1,32 @@
+[
+  {
+    "id": 2,
+    "hoten": "Tran Thi Binh",
+    "mssv": "SV002",
+    "lop": "DHKTPM18",
+    "nganh": "He thong thong tin"
+  },
+  {
+    "id": 3,
+    "hoten": "Le Minh Chau",
+    "mssv": "SV003",
+    "lop": "DHCNTT19A",
+    "nganh": "Cong nghe thong tin"
+  },
+  {
+    "id": 4,
+    "hoten": "phan anh t",
+    "mssv": "23103087",
+    "lop": "cnttk23",
+    "nganh": "cong nghe thong tin"
+  },
+  {
+    "id": 5,
+    "hoten": "23",
+    "mssv": "2323",
+    "lop": "23",
+    "nganh": "dss"
+  }
+  
+]
+
